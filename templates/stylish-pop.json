@@ -1,0 +1,25 @@
+{
+  "defaults": {
+    "duration": 20,
+    "text": {
+      "font_color": "white",
+      "shadow_color": "black@0.55",
+      "shadow_x": 0,
+      "shadow_y": 4
+    },
+    "watermark": {
+      "enabled": true,
+      "style_preset": "watermark"
+    }
+  },
+  "texts": [
+    {
+      "content": "",
+      "style_preset": "hero"
+    },
+    {
+      "content": "",
+      "style_preset": "subtitle"
+    }
+  ]
+}

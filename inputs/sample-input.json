@@ -1,0 +1,27 @@
+{
+  "background": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1080&q=80",
+  "audio_source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "audio_start": 30,
+  "duration": 20,
+  "template": "default-reel",
+  "texts": [
+    {
+      "content": "Nome da musica",
+      "x": "center",
+      "y": 420,
+      "font_size": 60,
+      "box": true
+    },
+    {
+      "content": "@nomedoinstagram",
+      "x": 60,
+      "y": 80,
+      "font_size": 28
+    }
+  ],
+  "watermark": {
+    "enabled": true,
+    "content": "@nomedoinstagram",
+    "position": "bottom-right"
+  }
+}

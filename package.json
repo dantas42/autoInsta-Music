@@ -1,0 +1,16 @@
+{
+  "name": "auto-insta-music",
+  "version": "1.0.0",
+  "description": "Gerador automatizado de videos curtos para Instagram com FFmpeg e yt-dlp.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "generate": "node src/cli.js generate",
+    "batch": "node src/cli.js batch",
+    "web": "node src/cli.js web",
+    "check": "node --check src/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

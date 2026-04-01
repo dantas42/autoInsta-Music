@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "input": "sample-input.json"
+    },
+    {
+      "input": "sample-input.json",
+      "overrides": {
+        "output_name": "variante-02",
+        "texts": [
+          {
+            "content": "Outra musica",
+            "x": "center",
+            "y": 520,
+            "font_size": 54,
+            "box": true
+          }
+        ]
+      }
+    }
+  ]
+}

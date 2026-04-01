@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>autoInsta Music Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar-shell" id="sidebar-shell">
+        <button type="button" id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true">Ocultar painel</button>
+
+        <section class="panel form-panel">
+          <div class="eyebrow">Music Reel Builder</div>
+          <h1>Studio de Reels</h1>
+          <p class="lede">Monte reels com uma sidebar limpa, editor visual, capa e presets prontos para gerar rapido.</p>
+
+          <form id="generator-form">
+            <div class="settings-stack">
+              <section class="settings-section">
+                <div class="section-title">Midia</div>
+                <label>
+                  <span>Background</span>
+                  <input name="background" placeholder="URL da imagem ou video" required />
+                </label>
+
+                <label>
+                  <span>Fonte de audio</span>
+                  <input name="audio_source" placeholder="URL do YouTube ou arquivo local" required />
+                </label>
+
+                <div class="grid two">
+                  <label>
+                    <span>Inicio do audio</span>
+                    <input name="audio_start" type="number" value="30" min="0" />
+                  </label>
+                  <label>
+                    <span>Duracao</span>
+                    <input name="duration" type="number" value="20" min="1" />
+                  </label>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <div class="section-title">Conteudo</div>
+                <div class="grid two">
+                  <label>
+                    <span>Titulo principal</span>
+                    <input name="hero_text" value="Nome da musica" />
+                  </label>
+                  <label>
+                    <span>Subtitulo</span>
+                    <input name="subtitle_text" value="Sinta o drop e salva esse som" />
+                  </label>
+                </div>
+
+                <div class="grid two">
+                  <label>
+                    <span>@ do perfil</span>
+                    <input name="handle_text" value="@nomedoinstagram" />
+                  </label>
+                  <label>
+                    <span>Watermark</span>
+                    <input name="watermark_content" value="@nomedoinstagram" />
+                  </label>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <div class="section-title">Estilo</div>
+                <label>
+                  <span>Preset visual</span>
+                  <select name="visual_preset">
+                    <option value="spotlight">Spotlight</option>
+                    <option value="bold-card">Bold Card</option>
+                    <option value="midnight-glass">Midnight Glass</option>
+                    <option value="neon-pulse">Neon Pulse</option>
+                    <option value="editorial">Editorial</option>
+                    <option value="lower-third">Lower Third</option>
+                    <option value="lower-third-right">Lower Third Right</option>
+                    <option value="poster">Poster</option>
+                    <option value="minimal">Minimal</option>
+                  </select>
+                </label>
+
+                <div class="grid two">
+                  <label>
+                    <span>Genero</span>
+                    <select name="genre_preset">
+                      <option value="">Neutro</option>
+                      <option value="pop">Pop</option>
+                      <option value="lofi">Lofi</option>
+                      <option value="phonk">Phonk</option>
+                      <option value="worship">Worship</option>
+                      <option value="trap">Trap</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Origem da musica</span>
+                    <select name="source_platform">
+                      <option value="">Sem badge</option>
+                      <option value="spotify">Spotify</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="soundcloud">SoundCloud</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="grid two">
+                  <label>
+                    <span>Animacao titulo</span>
+                    <select name="title_animation">
+                      <option value="preset">Usar preset</option>
+                      <option value="fade">Fade</option>
+                      <option value="slide-up">Slide Up</option>
+                      <option value="slide-left">Slide Left</option>
+                      <option value="slide-right">Slide Right</option>
+                      <option value="pop-in">Pop In</option>
+                      <option value="none">Sem animacao</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Animacao subtitulo</span>
+                    <select name="subtitle_animation">
+                      <option value="preset">Usar preset</option>
+                      <option value="fade">Fade</option>
+                      <option value="slide-up">Slide Up</option>
+                      <option value="slide-left">Slide Left</option>
+                      <option value="slide-right">Slide Right</option>
+                      <option value="pop-in">Pop In</option>
+                      <option value="none">Sem animacao</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="grid two">
+                  <button type="button" id="apply-base-config" class="secondary-button">Aplicar base</button>
+                  <button type="button" id="clear-manual-config" class="secondary-button">Limpar ajustes</button>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <div class="section-title">Capa</div>
+                <label class="checkbox-row">
+                  <input name="generate_cover" type="checkbox" />
+                  <span>Gerar capa junto com o video</span>
+                </label>
+                <label>
+                  <span>Titulo da capa</span>
+                  <input name="cover_title" placeholder="Usar o mesmo titulo do video" />
+                </label>
+                <label>
+                  <span>Subtitulo da capa</span>
+                  <input name="cover_subtitle" placeholder="Usar o mesmo subtitulo do video" />
+                </label>
+              </section>
+            </div>
+
+            <button type="submit" id="generate-button">Gerar video</button>
+            <p id="status-text" class="status idle">Pronto para gerar.</p>
+          </form>
+        </section>
+      </aside>
+
+      <main class="stage-panel">
+        <section class="preview-card panel">
+          <div class="preview-header">
+            <div>
+              <div class="eyebrow">Live Layout Preview</div>
+              <h2>Editor visual</h2>
+            </div>
+          </div>
+
+          <div class="phone-frame">
+            <div class="phone-screen" id="phone-screen">
+              <div class="screen-overlay" id="screen-overlay"></div>
+              <div class="safe-guide safe-guide-vertical"></div>
+              <div class="safe-guide safe-guide-horizontal"></div>
+              <div class="safe-zone"></div>
+              <div class="editor-hud" id="editor-hud">title · x: 0 · y: 0</div>
+              <div class="preview-source-badge" id="preview-source-badge"></div>
+              <div class="preview-handle" id="preview-handle">@nomedoinstagram</div>
+              <div class="preview-title" id="preview-title">Nome da musica</div>
+              <div class="preview-subtitle" id="preview-subtitle">Sinta o drop e salva esse som</div>
+              <div class="preview-watermark" id="preview-watermark">@nomedoinstagram</div>
+            </div>
+          </div>
+
+          <div class="editor-panel">
+            <div class="editor-header">
+              <div>
+                <div class="eyebrow">Editor</div>
+                <h2>Ajuste o layout</h2>
+              </div>
+              <button type="button" id="reset-layout" class="secondary-button compact-button">Resetar posicoes</button>
+            </div>
+
+            <p class="editor-note">Arraste para mover, use o grip para redimensionar e as setas do teclado para pequenos ajustes.</p>
+
+            <div class="grid two">
+              <label>
+                <span>Titulo X / Y</span>
+                <div class="pair">
+                  <input name="title_x" type="number" step="1" placeholder="x" form="generator-form" data-role-control="title" />
+                  <input name="title_y" type="number" step="1" placeholder="y" form="generator-form" data-role-control="title" />
+                </div>
+              </label>
+              <label>
+                <span>Titulo tamanho</span>
+                <input name="title_size" type="number" min="12" value="80" form="generator-form" data-role-control="title" />
+              </label>
+            </div>
+
+            <div class="grid two">
+              <label>
+                <span>Subtitulo X / Y</span>
+                <div class="pair">
+                  <input name="subtitle_x" type="number" step="1" placeholder="x" form="generator-form" data-role-control="subtitle" />
+                  <input name="subtitle_y" type="number" step="1" placeholder="y" form="generator-form" data-role-control="subtitle" />
+                </div>
+              </label>
+              <label>
+                <span>Subtitulo tamanho</span>
+                <input name="subtitle_size" type="number" min="12" value="34" form="generator-form" data-role-control="subtitle" />
+              </label>
+            </div>
+
+            <div class="grid two">
+              <label>
+                <span>Handle X / Y</span>
+                <div class="pair">
+                  <input name="handle_x" type="number" step="1" placeholder="x" form="generator-form" data-role-control="handle" />
+                  <input name="handle_y" type="number" step="1" placeholder="y" form="generator-form" data-role-control="handle" />
+                </div>
+              </label>
+              <label>
+                <span>Handle tamanho</span>
+                <input name="handle_size" type="number" min="10" value="28" form="generator-form" data-role-control="handle" />
+              </label>
+            </div>
+
+            <div class="grid two">
+              <label>
+                <span>Watermark X / Y</span>
+                <div class="pair">
+                  <input name="watermark_x" type="number" step="1" placeholder="x" form="generator-form" data-role-control="watermark" />
+                  <input name="watermark_y" type="number" step="1" placeholder="y" form="generator-form" data-role-control="watermark" />
+                </div>
+              </label>
+              <label>
+                <span>Watermark tamanho</span>
+                <input name="watermark_size" type="number" min="10" value="24" form="generator-form" data-role-control="watermark" />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="preview-card panel">
+          <div class="preview-header">
+            <div>
+              <div class="eyebrow">Cover Preview</div>
+              <h2>Capa do Instagram</h2>
+            </div>
+          </div>
+
+          <div class="phone-frame cover-frame">
+            <div class="phone-screen" id="cover-screen">
+              <div class="screen-overlay"></div>
+              <div class="preview-source-badge" id="cover-source-badge"></div>
+              <div class="preview-title" id="cover-title">Nome da musica</div>
+              <div class="preview-subtitle" id="cover-subtitle">Sinta o drop e salva esse som</div>
+            </div>
+          </div>
+        </section>
+
+        <details class="panel outputs-panel" id="outputs-panel">
+          <summary class="outputs-summary">
+            <div>
+              <div class="eyebrow">Saidas</div>
+              <h2>Ultimos videos gerados</h2>
+            </div>
+            <span class="summary-action">Abrir</span>
+          </summary>
+          <div class="outputs-body">
+            <div id="outputs-list" class="outputs-list"></div>
+            <button type="button" id="outputs-toggle" class="secondary-button" hidden>Mostrar mais</button>
+            <div class="output-actions-global">
+              <button type="button" id="open-latest-video" class="secondary-button">Abrir ultimo video</button>
+              <button type="button" id="open-output-folder" class="secondary-button">Abrir pasta</button>
+            </div>
+          </div>
+        </details>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
