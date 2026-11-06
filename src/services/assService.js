@@ -108,7 +108,7 @@ function resolveFromAnchor(anchor, marginX, marginY, width, height) {
   }
 }
 
-function parseManualCoordinate(value) {
+export function parseManualCoordinate(value) {
   if (value == null || value === "") {
     return null;
   }
@@ -117,12 +117,18 @@ function parseManualCoordinate(value) {
     return value;
   }
 
-  const direct = Number(value);
+  const trimmed = String(value).trim();
+
+  if (trimmed === "center" || trimmed === "auto") {
+    return null;
+  }
+
+  const direct = Number(trimmed);
   if (!Number.isNaN(direct)) {
     return direct;
   }
 
-  const centered = String(value || "").match(/^([0-9.]+)-\(text_[wh]\/2\)$/);
+  const centered = trimmed.match(/^([0-9.]+)-\(text_[wh]\/2\)$/);
   if (centered) {
     return Number(centered[1]);
   }
@@ -179,14 +185,27 @@ function buildStyle(name, entry) {
   ].join(",");
 }
 
-function buildDialogue(styleName, entry, duration, width, height) {
+export function buildDialogue(styleName, entry, duration, width, height) {
   const manualX = parseManualCoordinate(entry.x);
   const manualY = parseManualCoordinate(entry.y);
-  const manualAnchor = entry.manual_anchor || (typeof entry.x === "string" && String(entry.x).includes("text_w/2") ? "center" : "top-left");
-  const placement =
-    manualX != null && manualY != null
-      ? { x: manualX, y: manualY, alignment: assAlignment(manualAnchor) }
-      : resolveFromAnchor(entry.anchor || "center", Number(entry.margin_x || 0), Number(entry.margin_y || 0), width, height);
+  const computedManualAnchor = typeof entry.x === "string" && String(entry.x).includes("text_w/2") ? "center" : "top-left";
+  const anchorPlacement = resolveFromAnchor(entry.anchor || "center", Number(entry.margin_x || 0), Number(entry.margin_y || 0), width, height);
+
+  let placement = anchorPlacement;
+
+  if (manualX != null && manualY != null) {
+    placement = {
+      x: manualX,
+      y: manualY,
+      alignment: assAlignment(entry.manual_anchor || computedManualAnchor)
+    };
+  } else if (manualX != null || manualY != null) {
+    placement = {
+      x: manualX != null ? manualX : anchorPlacement.x,
+      y: manualY != null ? manualY : anchorPlacement.y,
+      alignment: entry.manual_anchor ? assAlignment(entry.manual_anchor) : anchorPlacement.alignment
+    };
+  }
 
   const tags = [`\\an${placement.alignment}`];
   const animation = entry.animation || {};

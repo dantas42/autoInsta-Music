@@ -70,8 +70,16 @@ export async function prepareBackground(background) {
   let extension = inferExtensionFromUrl(background, "");
 
   if (!extension) {
-    const response = await fetch(background, { method: "HEAD" });
-    extension = inferExtensionFromContentType(response.headers.get("content-type"), ".bin");
+    try {
+      const response = await fetch(background, { method: "HEAD", signal: AbortSignal.timeout(10_000) });
+      extension = inferExtensionFromContentType(response.headers.get("content-type"), ".bin");
+    } catch (error) {
+      if (error.name === "TimeoutError" || error.name === "AbortError") {
+        throw new Error(`Tempo esgotado ao verificar o background: ${background}`);
+      }
+
+      throw error;
+    }
   }
 
   const filename = `${createTimestampName("background")}${extension}`;
@@ -130,7 +138,15 @@ export async function prepareAudio(audioSource) {
   return localPath;
 }
 
-export function buildOutputPath(outputName) {
+export async function buildOutputPath(outputName) {
   const baseName = sanitizeFileName(outputName || createTimestampName("reel")) || createTimestampName("reel");
-  return path.join(paths.outputs, `${baseName}.mp4`);
+  let candidate = path.join(paths.outputs, `${baseName}.mp4`);
+  let counter = 2;
+
+  while (await fileExists(candidate)) {
+    candidate = path.join(paths.outputs, `${baseName}-${counter}.mp4`);
+    counter += 1;
+  }
+
+  return candidate;
 }

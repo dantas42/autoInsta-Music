@@ -252,6 +252,115 @@ const sourceBadgeMap = {
   soundcloud: { content: "☁ SoundCloud", font_color: "0xFF7A00", style_preset: "source_badge" }
 };
 
+function roleByIndex(index) {
+  if (index === 0) {
+    return "title";
+  }
+
+  if (index === 1) {
+    return "subtitle";
+  }
+
+  if (index === 2) {
+    return "handle";
+  }
+
+  return "custom";
+}
+
+function normalizeTextRoles(texts) {
+  if (!Array.isArray(texts)) {
+    return [];
+  }
+
+  return texts.map((entry, index) => ({
+    ...entry,
+    role: entry.role || roleByIndex(index)
+  }));
+}
+
+function applyVisualPresetToTexts(texts, presetName) {
+  const preset = visualPresetMap[presetName];
+
+  if (!preset) {
+    return texts;
+  }
+
+  return texts.map((entry) => ({
+    ...(preset[entry.role] || {}),
+    ...entry
+  }));
+}
+
+function applyGenrePresetToTexts(texts, genreName) {
+  const preset = genrePresetMap[genreName];
+
+  if (!preset) {
+    return texts;
+  }
+
+  return texts.map((entry) => ({
+    ...(preset[entry.role] || {}),
+    ...entry
+  }));
+}
+
+function mergeTextSlots(templateTexts, inputTexts) {
+  const count = Math.max(templateTexts.length, inputTexts.length);
+  const merged = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const slot = templateTexts[index];
+    const input = inputTexts[index];
+
+    if (slot && input) {
+      merged.push({
+        ...slot,
+        ...input,
+        role: input.role || slot.role
+      });
+    } else if (input) {
+      merged.push(input);
+    } else if (slot) {
+      merged.push(slot);
+    }
+  }
+
+  return merged.filter((entry) => entry.content);
+}
+
+function validationError(field, message) {
+  const error = new Error(message || `Campo "${field}" invalido.`);
+  error.statusCode = 400;
+  return error;
+}
+
+function validateRenderConfig(config) {
+  if (!config.background) {
+    throw validationError("background", "O campo background e obrigatorio.");
+  }
+
+  if (!config.audio_source) {
+    throw validationError("audio_source", "O campo audio_source e obrigatorio.");
+  }
+
+  if (config.duration != null && config.duration !== "") {
+    const duration = Number(config.duration);
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw validationError("duration", "O campo duration deve ser um numero maior que 0.");
+    }
+  }
+
+  if (config.audio_start != null && config.audio_start !== "") {
+    const audioStart = Number(config.audio_start);
+
+    if (!Number.isFinite(audioStart) || audioStart < 0) {
+      throw validationError("audio_start", "O campo audio_start deve ser um numero maior ou igual a 0.");
+    }
+  }
+}
+
 function applyTextDefaults(defaults = {}, entry = {}) {
   const preset = entry.style_preset ? textStylePresets[entry.style_preset] || {} : {};
 
@@ -309,50 +418,6 @@ function applyWatermarkDefaults(defaults = {}, value = {}) {
   };
 }
 
-function applyVisualPreset(config) {
-  const preset = visualPresetMap[config.visual_preset];
-
-  if (!preset) {
-    return config;
-  }
-
-  const texts = (config.texts || []).map((entry, index) => {
-    const role = entry.role || (index === 0 ? "title" : index === 1 ? "subtitle" : index === 2 ? "handle" : "custom");
-    const rolePreset = preset[role] || {};
-    return {
-      ...rolePreset,
-      ...entry
-    };
-  });
-
-  const watermark = {
-    ...(preset.watermark || {}),
-    ...(config.watermark || {})
-  };
-
-  return {
-    ...config,
-    texts,
-    watermark
-  };
-}
-
-function applyGenrePreset(config) {
-  const preset = genrePresetMap[config.genre_preset];
-
-  if (!preset) {
-    return config;
-  }
-
-  return {
-    ...config,
-    texts: (config.texts || []).map((entry) => ({
-      ...(preset[entry.role] || {}),
-      ...entry
-    }))
-  };
-}
-
 function appendSourceBadge(config) {
   const badge = sourceBadgeMap[config.source_platform];
 
@@ -373,26 +438,36 @@ function appendSourceBadge(config) {
 }
 
 export async function buildRenderConfig(config, options = {}) {
+  validateRenderConfig(config);
+
   const template = await loadTemplate(config.template);
   const templateDefaults = template.defaults || {};
-  const templateTexts = Array.isArray(template.texts) ? template.texts : [];
+  const visualName = config.visual_preset;
+  const genreName = config.genre_preset;
+  const visualPreset = visualPresetMap[visualName];
 
-  const rawTexts = [...templateTexts, ...(config.texts || [])];
-  const withTemplate = {
+  const templateTexts = normalizeTextRoles(template.texts);
+  const inputTexts = normalizeTextRoles(config.texts);
+
+  const processedInputTexts = applyGenrePresetToTexts(applyVisualPresetToTexts(inputTexts, visualName), genreName);
+  const processedTemplateTexts = applyGenrePresetToTexts(applyVisualPresetToTexts(templateTexts, visualName), genreName);
+  const mergedTexts = mergeTextSlots(processedTemplateTexts, processedInputTexts);
+
+  const base = {
     ...templateDefaults,
     ...template,
     ...config,
-    texts: rawTexts,
+    overlay_boxes: config.overlay_boxes || visualPreset?.overlay_boxes || [],
+    texts: mergedTexts,
     watermark: {
+      ...(visualPreset?.watermark || {}),
       ...(template.watermark || {}),
       ...(config.watermark || {})
     },
     resolvedInputPath: config.resolvedInputPath || options.resolvedInputPath
   };
 
-  const withVisualPreset = applyVisualPreset(withTemplate);
-  const withGenrePreset = applyGenrePreset(withVisualPreset);
-  const withSourceBadge = appendSourceBadge(withGenrePreset);
+  const withSourceBadge = appendSourceBadge(base);
 
   return {
     ...withSourceBadge,
@@ -407,10 +482,13 @@ export async function buildRenderConfig(config, options = {}) {
 }
 
 export function inferOutputName(config) {
+  const texts = config.texts || [];
+  const fallbackText = texts.find((entry) => entry.role === "title")?.content || texts.find((entry) => entry.content)?.content;
+
   return (
     config.output_name ||
     config.slug ||
-    (config.texts || []).find((entry) => entry.role === "title" || entry.content)?.content ||
+    fallbackText ||
     path.basename(config.resolvedInputPath || "reel", path.extname(config.resolvedInputPath || ""))
   );
 }

@@ -1,6 +1,7 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const rootDir = process.cwd();
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const windowsFontPath = process.platform === "win32" ? path.join(process.env.WINDIR || "C:\\Windows", "Fonts", "arial.ttf") : null;
 
 export const paths = {

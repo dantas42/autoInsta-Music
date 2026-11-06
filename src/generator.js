@@ -1,6 +1,6 @@
 import { paths } from "./config.js";
 import { logger } from "./logger.js";
-import { ensureDir } from "./utils/fs.js";
+import { cleanupTempFiles, ensureDir } from "./utils/fs.js";
 import { prepareAudio, prepareBackground, buildOutputPath } from "./services/assetService.js";
 import { cutAudio } from "./services/audioService.js";
 import { loadInputConfig } from "./services/inputLoader.js";
@@ -16,6 +16,7 @@ export async function generateFromConfig(config, options = {}) {
   await ensureDir(paths.temp);
   await ensureDir(paths.inputs);
   await ensureDir(paths.templates);
+  await cleanupTempFiles(paths.temp);
 
   logger.info("Preparando background");
   const backgroundPath = await prepareBackground(normalized.background);
@@ -29,7 +30,7 @@ export async function generateFromConfig(config, options = {}) {
   });
   const clippedAudioPath = await cutAudio(rawAudioPath, normalized.audio_start, normalized.duration);
 
-  const outputPath = buildOutputPath(inferOutputName(normalized));
+  const outputPath = await buildOutputPath(inferOutputName(normalized));
   const coverOutputPath = shouldGenerateCover ? outputPath.replace(/\.mp4$/i, "-cover.jpg") : null;
 
   logger.info("Renderizando video", { outputPath });

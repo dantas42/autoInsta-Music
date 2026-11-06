@@ -39,7 +39,7 @@ function buildVideoFilterChain(config) {
   return base.join(",");
 }
 
-export async function renderVideo({ backgroundPath, audioPath, outputPath, config }) {
+async function renderMedia({ backgroundPath, outputPath, config, extraInputs = [], outputOptions = [] }) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
   const mediaType = await detectMediaType(backgroundPath);
@@ -47,6 +47,7 @@ export async function renderVideo({ backgroundPath, audioPath, outputPath, confi
   const subtitlePath = await createAssSubtitleFile(config);
   const subtitleFilter = `subtitles='${escapeFilterPath(subtitlePath)}'`;
   const filterChain = [videoFilterChain, subtitleFilter].filter(Boolean).join(",");
+
   const args = ["-y"];
 
   if (mediaType === "image") {
@@ -57,64 +58,45 @@ export async function renderVideo({ backgroundPath, audioPath, outputPath, confi
     args.push("-stream_loop", "-1");
   }
 
-  args.push("-i", backgroundPath, "-i", audioPath);
-
-  args.push(
-    "-t",
-    String(config.duration || videoDefaults.duration),
-    "-r",
-    String(config.fps || videoDefaults.fps),
-    "-vf",
-    filterChain,
-    "-map",
-    "0:v:0",
-    "-map",
-    "1:a:0",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "medium",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    "-shortest",
-    outputPath
-  );
+  args.push("-i", backgroundPath, ...extraInputs, "-vf", filterChain, ...outputOptions, outputPath);
 
   await runCommand(binaryNames.ffmpeg, args);
   return outputPath;
 }
 
-export async function renderCover({ backgroundPath, outputPath, config }) {
-  await fs.mkdir(path.dirname(outputPath), { recursive: true });
-
-  const mediaType = await detectMediaType(backgroundPath);
-  const videoFilterChain = buildVideoFilterChain(config);
-  const subtitlePath = await createAssSubtitleFile(config);
-  const filterChain = [videoFilterChain, `subtitles='${escapeFilterPath(subtitlePath)}'`].filter(Boolean).join(",");
-  const args = ["-y"];
-
-  if (mediaType === "image") {
-    args.push("-loop", "1");
-  }
-
-  if (mediaType === "video") {
-    args.push("-stream_loop", "-1");
-  }
-
-  args.push(
-    "-i",
+export async function renderVideo({ backgroundPath, audioPath, outputPath, config }) {
+  return renderMedia({
     backgroundPath,
-    "-frames:v",
-    "1",
-    "-vf",
-    filterChain,
-    "-q:v",
-    "2",
-    outputPath
-  );
+    outputPath,
+    config,
+    extraInputs: ["-i", audioPath],
+    outputOptions: [
+      "-t",
+      String(config.duration || videoDefaults.duration),
+      "-r",
+      String(config.fps || videoDefaults.fps),
+      "-map",
+      "0:v:0",
+      "-map",
+      "1:a:0",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "medium",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-shortest"
+    ]
+  });
+}
 
-  await runCommand(binaryNames.ffmpeg, args);
-  return outputPath;
+export async function renderCover({ backgroundPath, outputPath, config }) {
+  return renderMedia({
+    backgroundPath,
+    outputPath,
+    config,
+    outputOptions: ["-frames:v", "1", "-q:v", "2"]
+  });
 }

@@ -8,7 +8,10 @@
     "generate": "node src/cli.js generate",
     "batch": "node src/cli.js batch",
     "web": "node src/cli.js web",
-    "check": "node --check src/cli.js"
+    "clean": "node src/cli.js clean",
+    "doctor": "node src/cli.js doctor",
+    "check": "node scripts/check-syntax.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"

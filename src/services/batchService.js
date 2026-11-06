@@ -1,6 +1,15 @@
-import path from "node:path";
 import { loadBatchConfig, loadInputConfig } from "./inputLoader.js";
 import { generateFromConfig } from "../generator.js";
+import { logger } from "../logger.js";
+
+export async function resolveJobConfig(job) {
+  if (job.input) {
+    return await loadInputConfig(job.input);
+  }
+
+  const { input, overrides, ...inlineConfig } = job;
+  return inlineConfig;
+}
 
 export async function runBatch(batchFile, options = {}) {
   const batchConfig = await loadBatchConfig(batchFile);
@@ -11,18 +20,32 @@ export async function runBatch(batchFile, options = {}) {
   }
 
   const results = [];
+  const failures = [];
 
-  for (const job of jobs) {
-    const config = job.input
-      ? await loadInputConfig(job.input)
-      : { ...job, resolvedInputPath: path.resolve(process.cwd(), batchFile) };
+  for (let index = 0; index < jobs.length; index += 1) {
+    const job = jobs[index];
 
-    const result = await generateFromConfig({
-      ...config,
-      ...job.overrides
-    }, options);
+    try {
+      const config = await resolveJobConfig(job);
+      const result = await generateFromConfig(
+        {
+          ...config,
+          ...job.overrides
+        },
+        options
+      );
+      results.push({ ok: true, index, ...result });
+    } catch (error) {
+      failures.push({ ok: false, index, message: error.message });
+      logger.warn(`Job ${index + 1} falhou`, { message: error.message });
+    }
+  }
 
-    results.push(result);
+  if (failures.length > 0) {
+    const error = new Error(`Batch concluido com ${failures.length} falha(s) de ${jobs.length}.`);
+    error.failures = failures;
+    error.results = results;
+    throw error;
   }
 
   return results;

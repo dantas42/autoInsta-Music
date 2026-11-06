@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { binaryNames } from "./config.js";
+import { binaryNames, paths } from "./config.js";
 import { generateFromFile } from "./generator.js";
 import { logger } from "./logger.js";
 import { runBatch } from "./services/batchService.js";
 import { runCommand } from "./utils/process.js";
+import { cleanupTempFiles } from "./utils/fs.js";
 import { startServer } from "./server.js";
 
 function printHelp() {
@@ -13,6 +14,7 @@ Uso:
   node src/cli.js batch <batch.json>
   node src/cli.js doctor
   node src/cli.js web [porta]
+  node src/cli.js clean
 
 Exemplos:
   node src/cli.js generate sample-input.json
@@ -24,6 +26,7 @@ Exemplos:
 async function runDoctor() {
   const commands = [
     { label: "ffmpeg", command: binaryNames.ffmpeg, args: ["-version"] },
+    { label: "ffprobe", command: binaryNames.ffprobe, args: ["-version"] },
     { label: "yt-dlp", command: binaryNames.ytDlp, args: ["--version"] }
   ];
 
@@ -79,9 +82,22 @@ async function main() {
       return;
     }
 
+    if (command === "clean") {
+      const removed = await cleanupTempFiles(paths.temp, 0);
+      logger.info("Temp limpo", { removed });
+      return;
+    }
+
     throw new Error(`Comando desconhecido: ${command}`);
   } catch (error) {
     logger.error(error.message);
+
+    if (error.failures) {
+      for (const failure of error.failures) {
+        logger.error(`Job ${failure.index + 1}: ${failure.message}`);
+      }
+    }
+
     process.exitCode = 1;
   }
 }

@@ -53,6 +53,35 @@ const sourceBadgeMap = {
   soundcloud: "SoundCloud"
 };
 
+function safeCssUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "";
+    }
+
+    return url.href.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/[\u0000-\u001f]/g, "");
+  } catch {
+    return "";
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const response = await fetch("/api/templates");
+    const data = await response.json();
+    const select = form.elements.namedItem("template");
+
+    for (const file of data.templates || []) {
+      const option = document.createElement("option");
+      option.value = file.replace(/\.json$/i, "");
+      option.textContent = option.value;
+      select.append(option);
+    }
+  } catch {}
+}
+
 function setLayerMarkup(node, text) {
   node.innerHTML = "";
   const label = document.createElement("span");
@@ -112,19 +141,33 @@ async function loadOutputs() {
   for (const output of visibleOutputs) {
     const item = document.createElement("div");
     item.className = "output-item";
-    item.innerHTML = `
-      <div>
-        <div class="output-name">${output.name}</div>
-        <div class="output-meta">${new Date(output.createdAt).toLocaleString("pt-BR")}</div>
-      </div>
-      <div class="output-side">
-        <div class="output-meta">${formatBytes(output.size)}</div>
-        <details class="output-details">
-          <summary>Detalhes</summary>
-          <div class="output-path">${output.path}</div>
-        </details>
-      </div>
-    `;
+
+    const detailsWrap = document.createElement("details");
+    detailsWrap.className = "output-details";
+    const summary = document.createElement("summary");
+    summary.textContent = "Detalhes";
+    const pathDiv = document.createElement("div");
+    pathDiv.className = "output-path";
+    pathDiv.textContent = output.path;
+    detailsWrap.append(summary, pathDiv);
+
+    const side = document.createElement("div");
+    side.className = "output-side";
+    const sizeDiv = document.createElement("div");
+    sizeDiv.className = "output-meta";
+    sizeDiv.textContent = formatBytes(output.size);
+    side.append(sizeDiv, detailsWrap);
+
+    const main = document.createElement("div");
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "output-name";
+    nameDiv.textContent = output.name;
+    const dateDiv = document.createElement("div");
+    dateDiv.className = "output-meta";
+    dateDiv.textContent = new Date(output.createdAt).toLocaleString("pt-BR");
+    main.append(nameDiv, dateDiv);
+
+    item.append(main, side);
     outputsList.append(item);
   }
 
@@ -273,6 +316,13 @@ function clearManualPositions(refresh = true) {
   }
 }
 
+function clearManualAdjustments() {
+  ["title_x", "title_y", "subtitle_x", "subtitle_y", "handle_x", "handle_y", "watermark_x", "watermark_y", "title_size", "subtitle_size", "handle_size", "watermark_size"].forEach(
+    (name) => setFieldValue(name, "")
+  );
+  updatePreview();
+}
+
 function updatePresetClasses(screen, visualPreset) {
   screen.classList.remove(
     "preset-spotlight",
@@ -310,11 +360,12 @@ function updatePreview() {
   setStaticLayerText(sourceBadgeNode, sourceLabel);
   setStaticLayerText(coverSourceBadgeNode, sourceLabel);
 
-  phoneScreen.style.backgroundImage = `
-    linear-gradient(to top, rgba(5, 8, 14, 0.82) 0%, rgba(5, 8, 14, 0.25) 45%, rgba(5, 8, 14, 0.05) 100%),
-    url('${background}')
-  `;
-  coverScreen.style.backgroundImage = phoneScreen.style.backgroundImage;
+  const gradient = "linear-gradient(to top, rgba(5, 8, 14, 0.82) 0%, rgba(5, 8, 14, 0.25) 45%, rgba(5, 8, 14, 0.05) 100%)";
+  const cssUrl = safeCssUrl(background);
+  const backgroundImage = cssUrl ? `${gradient}, url('${cssUrl}')` : gradient;
+
+  phoneScreen.style.backgroundImage = backgroundImage;
+  coverScreen.style.backgroundImage = backgroundImage;
   coverScreen.parentElement.closest(".preview-card").hidden = !shouldGenerateCover;
 
   sourceBadgeNode.classList.toggle("is-visible", Boolean(sourceLabel));
@@ -330,30 +381,10 @@ function buildPayload() {
   const titleAnimation = getAnimationConfig(getFieldValue("title_animation") || "preset");
   const subtitleAnimation = getAnimationConfig(getFieldValue("subtitle_animation") || "preset");
 
-  const heroPresetMap = {
-    spotlight: { style_preset: "hero" },
-    "bold-card": { style_preset: "hero_card", margin_y: 340, font_size: 86 },
-    "midnight-glass": { style_preset: "hero_glass", margin_y: 340, font_size: 80 },
-    "neon-pulse": { style_preset: "hero_neon", margin_y: 340, font_size: 88 },
-    editorial: { style_preset: "hero_editorial", margin_y: 352, font_size: 82 },
-    "lower-third": { style_preset: "hero_lower", margin_x: 84, margin_y: 268, font_size: 74, text_align: "left" },
-    "lower-third-right": { style_preset: "hero_lower_right", margin_x: 84, margin_y: 268, font_size: 74, text_align: "right" },
-    poster: { style_preset: "hero_poster", anchor: "center", font_size: 94 },
-    minimal: { style_preset: "hero", box: false, shadow_color: "black@0.55", margin_y: 330, font_size: 78 }
-  };
-
-  const subtitlePresetMap = {
-    spotlight: { style_preset: "subtitle" },
-    "bold-card": { style_preset: "subtitle", margin_y: 238, font_color: "white" },
-    "midnight-glass": { style_preset: "subtitle", margin_y: 238, font_color: "0xE6EEF7" },
-    "neon-pulse": { style_preset: "subtitle", margin_y: 236, font_color: "0xFFD8C2", shadow_color: "0xFF7A33@0.45" },
-    editorial: { style_preset: "subtitle", margin_y: 248, font_size: 30, font_color: "0xE7E5E4" },
-    "lower-third": { style_preset: "subtitle", anchor: "bottom-left", margin_x: 92, margin_y: 188, font_size: 28, text_align: "left", font_color: "0xE5E7EB" },
-    "lower-third-right": { style_preset: "subtitle", anchor: "bottom-right", margin_x: 92, margin_y: 188, font_size: 28, text_align: "right", font_color: "0xE5E7EB" },
-    poster: { style_preset: "subtitle", anchor: "bottom-center", margin_y: 170, font_size: 30, font_color: "0xFDE68A" },
-    minimal: { style_preset: "subtitle", margin_y: 230, font_size: 32 }
-  };
-
+  const titleSize = getNumericField("title_size");
+  const subtitleSize = getNumericField("subtitle_size");
+  const handleSize = getNumericField("handle_size");
+  const watermarkSize = getNumericField("watermark_size");
   const titleX = getNumericField("title_x");
   const titleY = getNumericField("title_y");
   const subtitleX = getNumericField("subtitle_x");
@@ -368,6 +399,7 @@ function buildPayload() {
     audio_source: getFieldValue("audio_source"),
     audio_start: Number(getFieldValue("audio_start") || 0),
     duration: Number(getFieldValue("duration") || 20),
+    template: getFieldValue("template") || undefined,
     visual_preset: visualPreset,
     genre_preset: getFieldValue("genre_preset") || undefined,
     source_platform: getFieldValue("source_platform") || undefined,
@@ -380,32 +412,28 @@ function buildPayload() {
       {
         content: getFieldValue("hero_text"),
         role: "title",
-        ...heroPresetMap[visualPreset],
         ...(titleAnimation !== undefined ? { animation: titleAnimation } : {}),
-        font_size: Number(getFieldValue("title_size") || heroPresetMap[visualPreset].font_size || 80),
+        ...(titleSize != null ? { font_size: titleSize } : {}),
         ...(titleX != null && titleY != null ? { x: titleX, y: titleY, manual_anchor: "center" } : {})
       },
       {
         content: getFieldValue("subtitle_text"),
         role: "subtitle",
-        ...subtitlePresetMap[visualPreset],
         ...(subtitleAnimation !== undefined ? { animation: subtitleAnimation } : {}),
-        font_size: Number(getFieldValue("subtitle_size") || subtitlePresetMap[visualPreset].font_size || 34),
+        ...(subtitleSize != null ? { font_size: subtitleSize } : {}),
         ...(subtitleX != null && subtitleY != null ? { x: subtitleX, y: subtitleY, manual_anchor: "center" } : {})
       },
       {
         content: getFieldValue("handle_text"),
         role: "handle",
-        style_preset: "handle",
-        font_size: Number(getFieldValue("handle_size") || 28),
+        ...(handleSize != null ? { font_size: handleSize } : {}),
         ...(handleX != null && handleY != null ? { x: handleX, y: handleY, manual_anchor: "top-left" } : {})
       }
     ],
     watermark: {
       enabled: true,
       content: getFieldValue("watermark_content"),
-      style_preset: "watermark",
-      font_size: Number(getFieldValue("watermark_size") || 24),
+      ...(watermarkSize != null ? { font_size: watermarkSize } : {}),
       ...(watermarkX != null && watermarkY != null ? { x: watermarkX, y: watermarkY, manual_anchor: "top-left" } : {})
     }
   };
@@ -538,7 +566,7 @@ resetLayoutButton.addEventListener("click", () => {
 });
 
 clearManualConfigButton.addEventListener("click", () => {
-  clearManualPositions();
+  clearManualAdjustments();
 });
 
 applyBaseConfigButton.addEventListener("click", () => {
@@ -604,6 +632,7 @@ window.addEventListener("keydown", (event) => {
 });
 
 applyBaseConfig();
+await loadTemplates();
 await loadOutputs();
 setActiveRole(activeRole);
 updatePreview();

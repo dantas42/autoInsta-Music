@@ -8,28 +8,61 @@ import { logger } from "./logger.js";
 import { ensureDir } from "./utils/fs.js";
 
 const publicDir = path.join(paths.root, "src", "web");
+const MAX_BODY_BYTES = 1024 * 1024;
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(payload));
 }
 
+function bodyError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function isInsideOrEqual(baseDir, targetPath) {
+  const relative = path.relative(baseDir, targetPath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function isStrictlyInside(baseDir, targetPath) {
+  const relative = path.relative(baseDir, targetPath);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
 async function readBody(request) {
   const chunks = [];
+  let totalBytes = 0;
 
   for await (const chunk of request) {
+    totalBytes += chunk.length;
+
+    if (totalBytes > MAX_BODY_BYTES) {
+      throw bodyError(413, "Corpo da requisicao excede o limite de 1MB.");
+    }
+
     chunks.push(chunk);
   }
 
   const raw = Buffer.concat(chunks).toString("utf8");
-  return raw ? JSON.parse(raw) : {};
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw bodyError(400, "Corpo da requisicao nao e um JSON valido.");
+  }
 }
 
 async function serveStatic(requestPath, response) {
   const cleanPath = requestPath === "/" ? "/index.html" : requestPath;
   const filePath = path.join(publicDir, cleanPath);
 
-  if (!filePath.startsWith(publicDir)) {
+  if (!isStrictlyInside(publicDir, filePath)) {
     sendJson(response, 403, { error: "Acesso negado." });
     return;
   }
@@ -37,6 +70,7 @@ async function serveStatic(requestPath, response) {
   try {
     const content = await fs.readFile(filePath);
     const extension = path.extname(filePath).toLowerCase();
+
     const contentType =
       extension === ".html"
         ? "text/html; charset=utf-8"
@@ -82,8 +116,9 @@ async function listOutputs() {
 
 function openPath(targetPath, mode = "file") {
   const resolved = path.resolve(targetPath);
+  const outputsRoot = path.resolve(paths.outputs);
 
-  if (!resolved.startsWith(path.resolve(paths.outputs))) {
+  if (!isInsideOrEqual(outputsRoot, resolved)) {
     throw new Error("Caminho fora da pasta de outputs.");
   }
 
@@ -146,12 +181,12 @@ export async function startServer(port = 3000) {
       sendJson(response, 404, { error: "Rota nao encontrada." });
     } catch (error) {
       logger.error("Falha na requisicao", { message: error.message });
-      sendJson(response, 500, { error: error.message });
+      sendJson(response, error.statusCode || 500, { error: error.message });
     }
   });
 
   return new Promise((resolve) => {
-    server.listen(port, () => {
+    server.listen(port, "127.0.0.1", () => {
       logger.info("Interface web disponivel", { url: `http://localhost:${port}` });
       resolve(server);
     });
